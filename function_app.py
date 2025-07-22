@@ -6,7 +6,7 @@ from helper_functions import *
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 @app.function_name(name="HttpTrigger1")
-@app.route(route="req")
+@app.route(route="req", methods=["POST"])
 def HttpTrigger1(req: func.HttpRequest) -> func.HttpResponse :
     logging.info('Python HTTP trigger function processed a request.')
 
