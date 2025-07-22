@@ -97,8 +97,8 @@ def generate_kusto_query_from_nl(prompt: str) -> str:
 // Generated from prompt: {prompt}
 // TODO: Replace with actual query generation logic
 GetTenantVersions
-| summarize count() by versions
-| order by versions desc
+| summarize count() by version
+| order by version desc
 """
     
     return placeholder_query.strip()
@@ -134,4 +134,10 @@ def execute_kusto_query(query: str) -> dict:
         with KustoClient(kusto_connection_string) as kusto_client:
             logging.info(f"Executing Kusto query: {query[:100]}...")
             response = kusto_client.execute(database_name, query)
-            return response.primary_results
+            logging.info("Query executed successfully.")
+            logging.debug(f"Query response: {response}")
+            # Convert KustoResultTable to list of dicts for JSON serialization
+            result_table = response.primary_results[0]
+            columns = [col.column_name for col in result_table.columns]
+            rows = [dict(zip(columns, row)) for row in result_table.rows]
+            return rows
