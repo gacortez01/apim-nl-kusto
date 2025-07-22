@@ -1,7 +1,5 @@
-import json
-from azure.kusto.data import DataFormat, KustoClient
-from azure.kusto.ingest import QueuedIngestClient
-from utils import AuthenticationModeOptions, Utils
+from azure.kusto.data import KustoClient
+from utils import Utils
 import os
 from openai import AzureOpenAI
 

@@ -1,5 +1,6 @@
 import azure.functions as func
 import logging
+import json
 from helper_functions import *
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
@@ -17,6 +18,7 @@ def HttpTrigger1(req: func.HttpRequest) -> func.HttpResponse :
 
     return func.HttpResponse("Executed Correctly.")
 
+@app.function_name(name="BasicLLMCall")
 @app.route(route="basic_llm_call", methods=["POST"])
 def basic_llm_call(req: func.HttpRequest) -> func.HttpResponse:
     """
@@ -45,7 +47,7 @@ def basic_llm_call(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500,
             mimetype="application/json"
         )
-
+@app.function_name(name="kustoNlQuery")
 @app.route(route="kusto_nl_query", methods=["POST"])
 def kusto_nl_query(req: func.HttpRequest) -> func.HttpResponse:
     """
