@@ -190,3 +190,6 @@ def execute_kusto_query(query: str) -> dict:
             columns = [col.column_name for col in result_table.columns]
             rows = [dict(zip(columns, row)) for row in result_table.rows]
             return rows
+        
+command = "GetTenantVersions |distinct serviceName"
+execute_kusto_query(command)
