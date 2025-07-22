@@ -1,4 +1,3 @@
-import json
 from azure.kusto.data import KustoClient
 from utils import Utils
 import os
