@@ -1,6 +1,11 @@
 import azure.functions as func
 import logging
 import json
+from azure.kusto.data import DataFormat, KustoClient
+from azure.kusto.ingest import QueuedIngestClient
+from utils import AuthenticationModeOptions, Utils
+
+CONFIG_FILE_NAME = "KustoConfig.json"
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -114,24 +119,19 @@ def execute_kusto_query(query: str) -> dict:
     # - Azure SDK for Python (azure-kusto-data)
     # - Managed Identity for authentication
     # - Proper error handling and retry logic
+
+    config_dict = Utils.load_configs(CONFIG_FILE_NAME)
+    kusto_uri = config_dict["kustoUri"]
+    database_name = config_dict["databaseName"]
+    authentication_mode = config_dict["authenticationMode"]
+
+    kusto_connection_string = Utils.Authentication.generate_connection_string(kusto_uri, authentication_mode)
     
-    logging.info(f"Executing Kusto query: {query[:100]}...")
-    
-    # Placeholder implementation - return mock results
-    placeholder_results = {
-        "query_executed": query,
-        "execution_time_ms": 150,
-        "row_count": 25,
-        "columns": [
-            {"name": "count_", "type": "int"},
-            {"name": "versions", "type": "string"}
-        ],
-        "data": [
-            {"count_": 120, "versions": "1.0"},
-            {"count_": 135, "versions": "1.1"},
-            {"count_": 98, "versions": "1.2"}
-        ],
-        "status": "completed"
-    }
-    
-    return placeholder_results
+    #Handle Null here
+    if not kusto_connection_string:
+        Utils.error_handler("Connection String error. Please validate your configuration file.")
+    else:
+        with KustoClient(kusto_connection_string) as kusto_client:
+            logging.info(f"Executing Kusto query: {query[:100]}...")
+            response = kusto_client.execute(database_name, query)
+            return response.primary_results
