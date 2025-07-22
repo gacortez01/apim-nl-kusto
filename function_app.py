@@ -6,7 +6,7 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 @app.function_name(name="HttpTrigger1")
 @app.route(route="req")
-def HttpTrigger1(req):
+def HttpTrigger1(req: func.HttpRequest) -> func.HttpResponse :
     logging.info('Python HTTP trigger function processed a request.')
 
     command = "GetTenantVersions |distinct serviceName"
@@ -14,6 +14,8 @@ def HttpTrigger1(req):
 
     for i, row in enumerate(result["primary_result"]):
         logging.info(f"Row {i + 1}: {row}")
+
+    return func.HttpResponse("Executed Correctly.")
 
 @app.route(route="basic_llm_call", methods=["POST"])
 def basic_llm_call(req: func.HttpRequest) -> func.HttpResponse:
