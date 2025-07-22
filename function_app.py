@@ -190,3 +190,14 @@ def execute_kusto_query(query: str) -> dict:
             columns = [col.column_name for col in result_table.columns]
             rows = [dict(zip(columns, row)) for row in result_table.rows]
             return rows
+        
+@app.function_name(name="HttpTrigger1")
+@app.route(route="req")
+def main(req):
+    logging.info('Python HTTP trigger function processed a request.')
+
+    command = "GetTenantVersions |distinct serviceName"
+    result = execute_kusto_query(command)
+
+    for i, row in enumerate(result["primary_result"]):
+        logging.info(f"Row {i + 1}: {row}")
