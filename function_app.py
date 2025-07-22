@@ -4,10 +4,41 @@ import json
 from azure.kusto.data import DataFormat, KustoClient
 from azure.kusto.ingest import QueuedIngestClient
 from utils import AuthenticationModeOptions, Utils
+import os
+from openai import AzureOpenAI
 
-CONFIG_FILE_NAME = "KustoConfig.json"
+CONFIG_FILE_NAME = "config.json"
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+@app.route(route="basic_llm_call", methods=["POST"])
+def basic_llm_call(req: func.HttpRequest) -> func.HttpResponse:
+    """
+    Azure Function to handle basic LLM calls.
+    Accepts POST requests with a JSON body containing the prompt.
+    """
+    logging.info('Basic LLM call function processed a request.')
+
+    try:
+        # Extract the natural language prompt from the request
+        prompt = get_prompt_from_request(req)
+        response_message = execute_llm_call(prompt)
+
+        logging.info(f"LLM response: {response_message}")
+
+        return func.HttpResponse(
+            json.dumps({"response": response_message}),
+            status_code=200,
+            mimetype="application/json"
+        )
+
+    except Exception as e:
+        logging.error(f"Error processing request: {str(e)}")
+        return func.HttpResponse(
+            json.dumps({"error": f"Internal server error: {str(e)}"}),
+            status_code=500,
+            mimetype="application/json"
+        )
 
 @app.route(route="kusto_nl_query", methods=["POST"])
 def kusto_nl_query(req: func.HttpRequest) -> func.HttpResponse:
@@ -19,28 +50,7 @@ def kusto_nl_query(req: func.HttpRequest) -> func.HttpResponse:
 
     try:
         # Extract the natural language prompt from the request
-        prompt = req.params.get('prompt')
-        if not prompt:
-            try:
-                req_body = req.get_json()
-                if req_body:
-                    prompt = req_body.get('prompt')
-            except ValueError as e:
-                logging.error(f"Failed to parse JSON body: {e}")
-                return func.HttpResponse(
-                    json.dumps({"error": "Invalid JSON in request body"}),
-                    status_code=400,
-                    mimetype="application/json"
-                )
-
-        if not prompt:
-            return func.HttpResponse(
-                json.dumps({
-                    "error": "Missing 'prompt' parameter. Please provide a natural language query description."
-                }),
-                status_code=400,
-                mimetype="application/json"
-            )
+        prompt = get_prompt_from_request(req)
 
         logging.info(f"Processing natural language prompt: {prompt}")
 
@@ -103,6 +113,45 @@ GetTenantVersions
     
     return placeholder_query.strip()
 
+def get_prompt_from_request(req: func.HttpRequest) -> str:
+    """
+    Extracts the 'prompt' parameter from the HTTP request.
+    
+    Args:
+        req (func.HttpRequest): The HTTP request object
+        
+    Returns:
+        str: The prompt string if found, otherwise None
+    """
+    prompt = req.params.get('prompt')
+    if not prompt:
+        try:
+            req_body = req.get_json()
+            if req_body:
+                prompt = req_body.get('prompt')
+        except ValueError as e:
+            logging.error(f"Failed to parse JSON body: {e}")
+            return None
+    return prompt
+
+def execute_llm_call(prompt: str) -> str:
+    if not prompt:
+        raise ValueError("Prompt cannot be empty")
+
+    client = AzureOpenAI(
+        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+        api_version="2025-01-01-preview",
+        api_key=os.environ.get("AI_FOUNDRY_API_KEY")
+    )
+
+    # Call the LLM with the provided prompt
+    response = client.chat.completions.create(
+        model=os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    logging.info(f"LLM response: {response.choices[0].message.content}")
+    return response.choices[0].message.content
 
 def execute_kusto_query(query: str) -> dict:
     """
